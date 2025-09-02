@@ -1,10 +1,8 @@
 import json
 import logging
 import html
-import re
-import signal
-import sys
 import os
+import sys
 from datetime import datetime
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import (
@@ -23,16 +21,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Глобальная переменная для управления остановкой
-application_instance = None
-
 # Состояния для ConversationHandler
 EVENT_NAME, EVENT_DATE, EVENT_ORGANIZER, EVENT_PRICE, EVENT_PLACE, EVENT_LINK = range(6)
 DELETE_EVENT, CONFIRM_DELETE = range(6, 8)
 
 # Файл для хранения данных
 JSON_FILE = 'calendar.json'
-USERS_FILE = 'users.json'  # Файл для хранения пользователей и их ролей
+USERS_FILE = 'users.json'
 
 # Роли пользователей
 ROLE_USER = 'user'
@@ -69,7 +64,7 @@ def load_users():
         # Создаем файл с администратором по умолчанию
         default_users = {
             "users": {
-                "1234567": {"role": ROLE_ADMIN, "username": "admin"}  # Замените на ваш ID
+                "123456789": {"role": ROLE_ADMIN, "username": "admin"}
             }
         }
         save_users(default_users)
@@ -88,7 +83,6 @@ def get_user_role(user_id):
     if user_id_str in users_data.get("users", {}):
         return users_data["users"][user_id_str]["role"]
     
-    # Если пользователь не найден, регистрируем его как обычного пользователя
     return register_new_user(user_id)
 
 def register_new_user(user_id):
@@ -109,7 +103,6 @@ def has_permission(user_id, required_role):
     """Проверка прав пользователя"""
     user_role = get_user_role(user_id)
     
-    # Определяем иерархию ролей
     role_hierarchy = {ROLE_USER: 1, ROLE_COMMANDER: 2, ROLE_ADMIN: 3}
     
     user_level = role_hierarchy.get(user_role, 0)
@@ -205,27 +198,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Добро пожаловать! Ваша роль: {user_role}\nВыберите действие:",
         reply_markup=reply_markup
     )
-
-async def stop_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Остановка бота (только для администраторов)"""
-    user_id = update.effective_user.id
-    
-    if not await check_permission(update, context, ROLE_ADMIN):
-        return
-    
-    logger.info(f"Администратор {user_id} запросил остановку бота")
-    
-    await update.message.reply_text(
-        "Останавливаю бота...",
-        reply_markup=ReplyKeyboardRemove()
-    )
-    
-    global application_instance
-    if application_instance:
-        await application_instance.stop()
-        await application_instance.shutdown()
-    
-    sys.exit(0)
 
 async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик главного меню"""
@@ -405,7 +377,7 @@ async def event_organizer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return EVENT_ORGANIZER
     
     context.user_data['event']['organisators'] = organizer
-    await update.message.reply_text("Введите цену за участие (число или диапазон, например: 500 или 300-1000, если событие бесплатное - укажите 0):")
+    await update.message.reply_text("Введите цену за участие (число или диапазон, например: 500 или 300-1000):")
     return EVENT_PRICE
 
 async def event_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -494,24 +466,8 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
     return ConversationHandler.END
 
-def signal_handler(signum, frame):
-    """Обработчик сигналов для корректного завершения"""
-    logger.info(f"Получен сигнал {signum}, останавливаю бота...")
-    global application_instance
-    if application_instance:
-        # Используем create_task для асинхронного завершения
-        import asyncio
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(application_instance.stop())
-        loop.run_until_complete(application_instance.shutdown())
-        loop.close()
-    sys.exit(0)
-
 def main():
     """Основная функция"""
-    global application_instance
-    
     # Получаем токен из переменных окружения
     BOT_TOKEN = os.getenv('API_TOKEN')
     if not BOT_TOKEN:
@@ -520,14 +476,9 @@ def main():
     
     # Создаем Application с токеном
     application = Application.builder().token(BOT_TOKEN).build()
-    application_instance = application
     
     # Инициализируем файл пользователей
     load_users()
-    
-    # Регистрируем обработчики сигналов
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
     
     # ConversationHandler для добавления событий
     add_conv_handler = ConversationHandler(
@@ -555,14 +506,13 @@ def main():
     
     # Добавление обработчиков
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("stop", stop_bot))
     application.add_handler(add_conv_handler)
     application.add_handler(delete_conv_handler)
     application.add_handler(MessageHandler(filters.Regex('^События$'), handle_main_menu))
     application.add_handler(MessageHandler(filters.Regex('^(Показать события|Назад)$'), handle_events_menu))
     
     print("Бот запущен...")
-    print("Для остановки бота используйте команду /stop в Telegram или Ctrl+C в терминале")
+    print("Для остановки бота используйте Ctrl+C в терминале")
     
     # Запускаем бота
     application.run_polling()
