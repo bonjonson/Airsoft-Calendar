@@ -42,6 +42,20 @@ events_keyboard_admin = [['Сообщить о событии', 'Показат�
 delete_keyboard = [['Отменить удаление']]
 confirm_delete_keyboard = [['Да, удалить', 'Нет, отменить']]
 
+async def is_private_chat(update: Update):
+    """Проверяет, что сообщение пришло из личного чата"""
+    return update.effective_chat.type == 'private'
+
+async def private_chat_only(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Проверяет тип чата и отправляет сообщение если это не личный чат"""
+    if not await is_private_chat(update):
+        await update.message.reply_text(
+            "🤖 Я работаю только в личных сообщениях. "
+            "Напишите мне в личку для управления событиями."
+        )
+        return False
+    return True
+
 def load_events():
     """Загрузка событий из файла"""
     try:
@@ -190,6 +204,10 @@ def delete_event_by_name(event_name):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /start"""
+    # Проверяем, что это личный чат
+    if not await private_chat_only(update, context):
+        return
+    
     user_id = update.effective_user.id
     user_role = get_user_role(user_id)
     
@@ -201,6 +219,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик главного меню"""
+    # Проверяем, что это личный чат
+    if not await private_chat_only(update, context):
+        return
+    
     text = update.message.text
     user_id = update.effective_user.id
     
@@ -213,6 +235,10 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_events_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик меню событий"""
+    # Проверяем, что это личный чат
+    if not await private_chat_only(update, context):
+        return ConversationHandler.END
+    
     text = update.message.text
     user_id = update.effective_user.id
     
@@ -250,6 +276,10 @@ async def handle_events_menu(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def delete_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Удаление события по названию"""
+    # Проверяем, что это личный чат
+    if not await private_chat_only(update, context):
+        return ConversationHandler.END
+    
     user_id = update.effective_user.id
     
     if not await check_permission(update, context, ROLE_ADMIN):
@@ -300,6 +330,10 @@ async def delete_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def confirm_delete_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Подтверждение удаления события"""
+    # Проверяем, что это личный чат
+    if not await private_chat_only(update, context):
+        return ConversationHandler.END
+    
     user_id = update.effective_user.id
     
     if not await check_permission(update, context, ROLE_ADMIN):
@@ -341,6 +375,10 @@ async def confirm_delete_event(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def event_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Получение названия события"""
+    # Проверяем, что это личный чат
+    if not await private_chat_only(update, context):
+        return ConversationHandler.END
+    
     user_id = update.effective_user.id
     
     if not await check_permission(update, context, ROLE_COMMANDER):
@@ -358,6 +396,10 @@ async def event_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def event_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Получение даты события"""
+    # Проверяем, что это личный чат
+    if not await private_chat_only(update, context):
+        return ConversationHandler.END
+    
     date = update.message.text.strip()
     
     if not validate_date(date):
@@ -370,6 +412,10 @@ async def event_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def event_organizer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Получение организатора"""
+    # Проверяем, что это личный чат
+    if not await private_chat_only(update, context):
+        return ConversationHandler.END
+    
     organizer = update.message.text.strip()
     
     if not organizer:
@@ -382,6 +428,10 @@ async def event_organizer(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def event_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Получение цены"""
+    # Проверяем, что это личный чат
+    if not await private_chat_only(update, context):
+        return ConversationHandler.END
+    
     price = update.message.text.strip()
     
     if not validate_price(price):
@@ -396,6 +446,10 @@ async def event_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def event_place(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Получение места проведения"""
+    # Проверяем, что это личный чат
+    if not await private_chat_only(update, context):
+        return ConversationHandler.END
+    
     place = update.message.text.strip()
     
     if not place:
@@ -408,6 +462,10 @@ async def event_place(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def event_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Получение ссылки и сохранение события"""
+    # Проверяем, что это личный чат
+    if not await private_chat_only(update, context):
+        return ConversationHandler.END
+    
     link = update.message.text.strip()
     
     if not link:
@@ -432,6 +490,10 @@ async def event_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def show_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Показать все события"""
+    # Проверяем, что это личный чат
+    if not await private_chat_only(update, context):
+        return
+    
     data = load_events()
     events = data.get('events', [])
     
@@ -457,6 +519,10 @@ async def show_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Отмена операции"""
+    # Проверяем, что это личный чат
+    if not await private_chat_only(update, context):
+        return ConversationHandler.END
+    
     user_id = update.effective_user.id
     reply_markup = get_events_keyboard(user_id)
     await update.message.reply_text(
@@ -512,7 +578,7 @@ def main():
     application.add_handler(MessageHandler(filters.Regex('^(Показать события|Назад)$'), handle_events_menu))
     
     print("Бот запущен...")
-    print("Для остановки бота используйте Ctrl+C в терминале")
+    print("Бот работает только в личных сообщениях")
     
     # Запускаем бота
     application.run_polling()
