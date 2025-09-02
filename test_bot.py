@@ -1,5 +1,6 @@
 import pytest
-from main import load_events, save_events, validate_date, validate_price, format_price
+import json
+from main import validate_date, validate_price, format_price
 
 def test_load_events_empty_file(tmp_path):
     """Тест загрузки событий из несуществующего файла"""
@@ -10,7 +11,6 @@ def test_load_events_empty_file(tmp_path):
     def test_load():
         try:
             with open(test_file, 'r', encoding='utf-8') as f:
-                import json
                 return json.load(f)
         except (FileNotFoundError, json.JSONDecodeError):
             return {"events": []}
@@ -59,14 +59,16 @@ def test_save_and_load_events(tmp_path):
     
     # Сохраняем тестовые данные
     with open(test_file, 'w', encoding='utf-8') as f:
-        import json
         json.dump(test_data, f, ensure_ascii=False, indent=2)
     
     # Загружаем обратно
     with open(test_file, 'r', encoding='utf-8') as f:
-        import json
         loaded_data = json.load(f)
     
     assert loaded_data == test_data
     assert len(loaded_data["events"]) == 1
     assert loaded_data["events"][0]["name"] == "Test Event"
+
+def test_example():
+    """Простой тест для проверки работы pytest"""
+    assert True
